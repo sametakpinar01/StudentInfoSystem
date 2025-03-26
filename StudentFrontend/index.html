@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+   <meta charset="UTF-8">
+   <title>Öğrenci Bilgi Sistemi</title>
+   <style>
+      /* Sayfa genel düzeni */
+      body {
+         font-family: Arial, sans-serif;
+         margin: 0;
+         padding: 0;
+         display: flex;
+         justify-content: center;
+         align-items: center;
+         min-height: 100vh;
+         background-color: #f4f4f9;
+      }
+
+      /* Ana kapsayıcı */
+      .container {
+         width: 80%;
+         max-width: 800px;
+         background: #ffffff;
+         padding: 20px;
+         border-radius: 8px;
+         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Başlıklar */
+      h2 {
+         text-align: center;
+         color: #333;
+         margin-bottom: 20px;
+      }
+
+      /* Form düzeni */
+      .form-group {
+         display: flex;
+         align-items: center;
+         margin-bottom: 15px;
+      }
+
+      .form-group label {
+         width: 120px;
+         text-align: right;
+         margin-right: 10px;
+         font-weight: bold;
+      }
+
+      .form-group input {
+         flex: 1;
+         padding: 8px;
+         border: 1px solid #ccc;
+         border-radius: 4px;
+      }
+
+      button[type="submit"] {
+         display: block;
+         width: 100%;
+         padding: 10px;
+         background-color: #4CAF50;
+         color: white;
+         border: none;
+         border-radius: 4px;
+         cursor: pointer;
+         font-size: 16px;
+      }
+
+      button[type="submit"]:hover {
+         background-color: #45a049;
+      }
+
+      /* Tablo düzeni */
+      table {
+         width: 100%;
+         border-collapse: collapse;
+         margin-top: 20px;
+      }
+
+      table th,
+      table td {
+         border: 1px solid #ddd;
+         padding: 8px;
+         text-align: center;
+      }
+
+      table th {
+         background-color: #f2f2f2;
+         color: #333;
+         font-weight: bold;
+      }
+
+      table tr:nth-child(even) {
+         background-color: #f9f9f9;
+      }
+
+      table tr:hover {
+         background-color: #f1f1f1;
+      }
+
+      /* Sil butonu */
+      table button {
+         background-color: #e74c3c;
+         color: white;
+         border: none;
+         padding: 5px 10px;
+         border-radius: 4px;
+         cursor: pointer;
+      }
+
+      table button:hover {
+         background-color: #c0392b;
+      }
+   </style>
+</head>
+
+<body>
+   <div class="container">
+      <!-- Öğrenci ekleme formu başlığı -->
+      <h2>Öğrenci Ekle</h2>
+      <form id="studentForm">
+         <!-- Ad alanı -->
+         <div class="form-group">
+            <label for="firstName">Ad:</label>
+            <input type="text" id="firstName" name="firstName">
+         </div>
+         <!-- Soyad alanı -->
+         <div class="form-group">
+            <label for="lastName">Soyad:</label>
+            <input type="text" id="lastName" name="lastName">
+         </div>
+         <!-- Öğrenci numarası alanı -->
+         <div class="form-group">
+            <label for="studentNumber">Öğrenci No:</label>
+            <input type="text" id="studentNumber" name="studentNumber">
+         </div>
+         <!-- Sınıf alanı -->
+         <div class="form-group">
+            <label for="className">Sınıf:</label>
+            <input type="text" id="className" name="className">
+         </div>
+         <!-- Kaydet butonu -->
+         <button type="submit">Kaydet</button>
+      </form>
+
+      <!-- Öğrenci listesi başlığı -->
+      <h2>Öğrenci Listesi</h2>
+      <table id="studentTable">
+         <thead>
+            <tr>
+               <th>ID</th>
+               <th>Ad</th>
+               <th>Soyad</th>
+               <th>Öğrenci No</th>
+               <th>Sınıf</th>
+               <th>İşlemler</th>
+            </tr>
+         </thead>
+         <tbody></tbody>
+      </table>
+   </div>
+
+   <script>
+      // API URL'si
+      const apiUrl = "https://localhost:7012/api/students";
+
+      // Form gönderimi (Create)
+      document.getElementById("studentForm").addEventListener("submit", async function (event) {
+         event.preventDefault(); // Sayfanın yeniden yüklenmesini engelle
+
+         // Form doğrulama
+         const firstName = document.getElementById("firstName").value.trim();
+         const lastName = document.getElementById("lastName").value.trim();
+         const studentNumber = document.getElementById("studentNumber").value.trim();
+         const className = document.getElementById("className").value.trim();
+
+         // Zorunlu alan kontrolü
+         if (!firstName || !lastName || !studentNumber) {
+            alert("Ad, soyad ve öğrenci numarası zorunludur!");
+            return;
+         }
+
+         // Yeni öğrenci nesnesi oluştur
+         const student = {
+            firstName: firstName,
+            lastName: lastName,
+            studentNumber: studentNumber,
+            className: className
+         };
+
+         try {
+            // POST isteği gönder
+            const response = await fetch(apiUrl, {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify(student)
+            });
+
+            // Hata kontrolü
+            if (!response.ok) {
+               const errorData = await response.json();
+               throw new Error(errorData.message || "Öğrenci eklenemedi: " + response.status);
+            }
+
+            // Öğrenci listesini güncelle
+            await loadStudents();
+            document.getElementById("studentForm").reset(); // Formu sıfırla
+            alert("Öğrenci başarıyla eklendi!");
+         } catch (error) {
+            console.error("Hata:", error);
+            alert("Öğrenci eklenirken bir hata oluştu: " + error.message);
+         }
+      });
+
+      // Öğrencileri listele (Read)
+      async function loadStudents() {
+         try {
+            // GET isteği gönder
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+               throw new Error(`Öğrenci listesi yüklenemedi: ${response.status} ${response.statusText}`);
+            }
+            const students = await response.json();
+
+            // Tabloyu temizle ve güncelle
+            const tbody = document.querySelector("#studentTable tbody");
+            tbody.innerHTML = "";
+            students.forEach(student => {
+               tbody.innerHTML += `
+                    <tr>
+                        <td>${student.id}</td>
+                        <td>${student.firstName}</td>
+                        <td>${student.lastName}</td>
+                        <td>${student.studentNumber}</td>
+                        <td>${student.className}</td>
+                        <td><button onclick="deleteStudent(${student.id})">Sil</button></td>
+                    </tr>`;
+            });
+         } catch (error) {
+            console.error("Hata:", error);
+            alert("Öğrenci listesi yüklenirken bir hata oluştu: " + error.message);
+         }
+      }
+
+      // Öğrenci sil (Delete)
+      async function deleteStudent(id) {
+         // Silme işlemi onayı
+         if (!confirm("Bu öğrenciyi silmek istediğinizden emin misiniz?")) return;
+
+         try {
+            // DELETE isteği gönder
+            const response = await fetch(`${apiUrl}/${id}`, { method: "DELETE" });
+            if (!response.ok) {
+               throw new Error(`Öğrenci silinemedi: ${response.status} ${response.statusText}`);
+            }
+            // Öğrenci listesini güncelle
+            await loadStudents();
+            alert("Öğrenci başarıyla silindi!");
+         } catch (error) {
+            console.error("Hata:", error);
+            alert("Öğrenci silinirken bir hata oluştu: " + error.message);
+         }
+      }
+
+      // Sayfa yüklendiğinde öğrenci listesini getir
+      loadStudents();
+   </script>
+</body>
+
+</html>
